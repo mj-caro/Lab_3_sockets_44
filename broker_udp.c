@@ -33,10 +33,10 @@ int main() {
 
     bind(servidor_id, (struct sockaddr*)& dir_servidor, sizeof(dir_servidor)); // Asignamos el puerto 8080 al socket
 
-    printf("Broker UDP esta encendido y escuchando en el puerto ", PUERTO); //Para que el usuario sepa que el broker está activo y en qué puerto
+    printf("Broker UDP esta encendido y escuchando en el puerto %d\n", PUERTO); //Para que el usuario sepa que el broker está activo y en qué puerto
 
     while(1) {                          // Acá hicimos un bucle infinito para que el broker no se vaya a dormir y siempre esté escuchando
-        memset(buffer, 0, BUFFER_SIZE);               // limpa el buffer de memoria antes de leer
+        memset(buffer, 0, BUFFER_SIZE);             // limpa el buffer de memoria antes de leer
         
         // Recibimos un mensaje de cualquier cliente y guardamos su IP/puerto en 'dir_cliente'
         int bytes = recvfrom(servidor_id, buffer, BUFFER_SIZE - 1, 0, (struct sockaddr*) & dir_cliente, & dir_len);
