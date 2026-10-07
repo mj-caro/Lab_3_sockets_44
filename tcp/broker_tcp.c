@@ -1,3 +1,4 @@
+// La documentación COMPLETA de este código se encuentra en el informe de laboratorio.
 #include <stdio.h> // Para imprimir en pantalla jaja
 #include <stdlib.h> // Para control del sistema (hacer exit)
 #include <string.h> //manipulación y manejo de cadenas de texto
@@ -68,11 +69,11 @@ int main() {
 
     printf("=== Broker TCP iniciado exitosamente en el puerto %d ===\n", PUERTO_BROKER);
 
-    while (1) {
-        // Limpiar y preparar el conjunto de descriptores para select()
-        FD_ZERO(&readfds);
-        FD_SET(servidor_fd, &readfds); // Incluimos el socket servidor de escucha
-        max_fd = servidor_fd;
+    while (1) { // Mantiene al broker activo y escuchando conexiones entrantes
+
+        FD_ZERO(&readfds); // Limpiamos el conjunto de sockets antes de agregar los nuevos
+        FD_SET(servidor_fd, &readfds); // Agregamos el socket del servidor al conjunto de monitoreo
+        max_fd = servidor_fd; // valor por defecto, en el siguiente bucle lo actualizamos de ser necesario
 
         // Agregar los sockets activos de los clientes al conjunto de monitoreo
         for (i = 0; i < MAX_SUBS; i++) {
@@ -133,7 +134,7 @@ int main() {
                             printf("[REGISTRO] Socket %d suscrito al tema: '%s' (Total temas: %d)\n", 
                                    sd, mensaje.tema, subs[i].total_temas);
                         } else {
-                            printf("[ADVERTENCIA] Socket %d alcanzando limite maximo de suscripciones.\n", sd);
+                            printf("[ADVERTENCIA] Socket %d alcanzó limite maximo de suscripciones.\n", sd);
                         }
                     } 
 
