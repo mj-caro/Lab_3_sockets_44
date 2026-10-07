@@ -35,25 +35,35 @@ int main() {
     }
 
     printf("=== Conectado exitosamente al Broker TCP ===\n");
+    printf("(Escriba 'salir' en el tema para finalizar el programa)\n\n");
 
     // Publicación y envio de un evento/noticia
-    memset(&mensaje, 0, sizeof(MensajeTCP));
-    mensaje.tipo = TIPO_PUBLICAR;
+    while (1) {
+        memset(&mensaje, 0, sizeof(MensajeTCP));
+        mensaje.tipo = TIPO_PUBLICAR;
 
-    printf("Ingrese el tema o partido del evento (ej. Colombia_vs_Brasil): ");
-    if (fgets(mensaje.tema, TAM_TEMA, stdin) != NULL) {
-        mensaje.tema[strcspn(mensaje.tema, "\n")] = '\0'; // Limpiar '\n'
-    }
+        printf("Ingrese el tema o partido del evento (ej. Colombia_vs_Brasil): ");
+        if (fgets(mensaje.tema, TAM_TEMA, stdin) != NULL) {
+            mensaje.tema[strcspn(mensaje.tema, "\n")] = '\0'; // Limpiar '\n'
+        }
 
-    printf("Ingrese la noticia/evento a publicar: ");
-    if (fgets(mensaje.mensaje, TAM_MENSAJE, stdin) != NULL) {
-        mensaje.mensaje[strcspn(mensaje.mensaje, "\n")] = '\0'; // Limpiar '\n'
-    }
+        // Condición para cerrar la sesión activa a voluntad del usuario
+        if (strcmp(mensaje.tema, "salir") == 0) {
+            printf("Cerrando la sesión de publicación...\n");
+            break;
+        }
 
-    if (send(socket_fd, &mensaje, sizeof(MensajeTCP), 0) < 0) {
-        perror("Error al enviar la publicación");
-    } else {
-        printf("\n[ÉXITO] Publicación enviada correctamente al Broker.\n");
+        printf("Ingrese la noticia/evento a publicar: ");
+        if (fgets(mensaje.mensaje, TAM_MENSAJE, stdin) != NULL) {
+            mensaje.mensaje[strcspn(mensaje.mensaje, "\n")] = '\0'; // Limpiar '\n'
+        }
+
+        if (send(socket_fd, &mensaje, sizeof(MensajeTCP), 0) < 0) {
+            perror("Error al enviar la publicación");
+            break;
+        } else {
+            printf("[ÉXITO] Publicación enviada correctamente al Broker.\n\n");
+        }
     }
 
     close(socket_fd);

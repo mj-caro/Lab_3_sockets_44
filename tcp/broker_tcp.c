@@ -10,13 +10,11 @@
 #include "protocolo.h" // Importamos nuestro "contrato de datos"
 
 #define MAX_SUBS 20
-#define MAX_TEMAS 5
 
 // Estructura interna del broker de suscriptor
 typedef struct {
-    int socket_fd;                       // Identificador del socket TCP (File Descriptor)
-    char temas[MAX_TEMAS][TAM_TEMA];     // Lista de temas a los que se ha suscrito
-    int total_temas;                     // Cantidad de temas registrados activamente
+    int socket_fd;             // Identificador del socket TCP (File Descriptor)
+    char tema[TAM_TEMA];       // Tema al que está suscrito
 } Suscriptor;
 
 int main() {
@@ -28,13 +26,11 @@ int main() {
     Suscriptor subs[MAX_SUBS];
     for (i = 0; i < MAX_SUBS; i++) {
         subs[i].socket_fd = 0;
-        subs[i].total_temas = 0;
+        subs[i].tema[0] = '\0';
     }
 
     // Conjunto de sockets para la función de multiplexación select()
     fd_set readfds;
-
-
 
     // Creación del socket
     servidor_fd = socket(AF_INET, SOCK_STREAM, 0); // AF_INET = IPv4, SOCK_STREAM = TCP
@@ -51,8 +47,6 @@ int main() {
     direccion.sin_family = AF_INET;
     direccion.sin_addr.s_addr = INADDR_ANY; // Escucha en cualquier interfaz de red local
     direccion.sin_port = htons(PUERTO_BROKER);
-
-
 
     // Enlazar el puerto al socket y ponerlo en modo de escucha pasiva
     if (bind(servidor_fd, (struct sockaddr *)&direccion, sizeof(direccion)) < 0) {
@@ -100,7 +94,7 @@ int main() {
                 for (i = 0; i < MAX_SUBS; i++) {
                     if (subs[i].socket_fd == 0) {
                         subs[i].socket_fd = nuevo_socket;
-                        subs[i].total_temas = 0; // Inicia sin temas hasta recibir TIPO_REGISTRAR_SUB
+                        subs[i].tema[0] = '\0'; // Inicia sin tema hasta recibir TIPO_REGISTRAR_SUB
                         break;
                     }
                 }
@@ -122,20 +116,14 @@ int main() {
                     printf("[DESCONEXION] Cliente desconectado (Socket FD: %d)\n", sd);
                     close(sd);
                     subs[i].socket_fd = 0;
-                    subs[i].total_temas = 0; // Se resetean sus temas registrados
+                    subs[i].tema[0] = '\0'; // Se resetea el tema registrado
                 } else if (bytes_leidos > 0) {
 
                     // Opción 1: Solicitud de registro a un tema/partido
                     if (mensaje.tipo == TIPO_REGISTRAR_SUB) {
-                        if (subs[i].total_temas < MAX_TEMAS) {
-                            strncpy(subs[i].temas[subs[i].total_temas], mensaje.tema, TAM_TEMA - 1);
-                            subs[i].temas[subs[i].total_temas][TAM_TEMA - 1] = '\0'; // Asegurar fin de cadena
-                            subs[i].total_temas++;
-                            printf("[REGISTRO] Socket %d suscrito al tema: '%s' (Total temas: %d)\n", 
-                                   sd, mensaje.tema, subs[i].total_temas);
-                        } else {
-                            printf("[ADVERTENCIA] Socket %d alcanzó limite maximo de suscripciones.\n", sd);
-                        }
+                        strncpy(subs[i].tema, mensaje.tema, TAM_TEMA - 1);
+                        subs[i].tema[TAM_TEMA - 1] = '\0'; // Asegurar fin de cadena
+                        printf("[REGISTRO] Socket %d suscrito al tema: '%s'\n", sd, mensaje.tema);
                     } 
 
                     // Opción 2: Evento o noticia enviada por un publicador
@@ -144,16 +132,11 @@ int main() {
 
                         // Reenviar la noticia ÚNICAMENTE a las conexiones interesadas en este tema
                         for (int j = 0; j < MAX_SUBS; j++) {
-                            if (subs[j].socket_fd > 0 && subs[j].total_temas > 0) {
-                                
-                                // Verificar si el tema de la noticia coincide con alguno de la lista del suscriptor
-                                for (int k = 0; k < subs[j].total_temas; k++) {
-                                    if (strcmp(subs[j].temas[k], mensaje.tema) == 0) {
-                                        send(subs[j].socket_fd, &mensaje, sizeof(MensajeTCP), 0);
-                                        break; // Encontrado: reenviar y salir del bucle para evitar duplicados
-                                    }
+                            if (subs[j].socket_fd > 0 && subs[j].tema[0] != '\0') {
+                                // Verificar si el tema de la noticia coincide con el del suscriptor
+                                if (strcmp(subs[j].tema, mensaje.tema) == 0) {
+                                    send(subs[j].socket_fd, &mensaje, sizeof(MensajeTCP), 0);
                                 }
-
                             }
                         }
                     }
